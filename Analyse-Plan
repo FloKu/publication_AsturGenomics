@@ -1,0 +1,13 @@
+Ausgehend: Finales Vortex File der SNPs pro Sample
+
+Wir bleiben beim file mit 40.000 SNPs als primäres File - > dieses also zum Rechnen der Bäume verwenden
+
+
+1) ML und Bayes Tree: using IQ-Tree SNP Tree -> MIN
+
+2) Tree mit SNPphylo, kennt das wer?
+
+3) Diff indices - genetic distance?
+
+
+Tanglegram mit den alten Daten möglich?
