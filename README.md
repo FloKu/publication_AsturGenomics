@@ -9,3 +9,4 @@ Publication details will be added upon acceptance.
 todo
 1) add analyses.R
 2) clean scripts
+3) 3) add mappedreads.txt from qualimap run
