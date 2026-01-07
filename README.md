@@ -7,5 +7,5 @@ Publication details will be added upon acceptance.
 
 
 todo
-add analyses.R
-clean scripts
+1) add analyses.R
+2) clean scripts
