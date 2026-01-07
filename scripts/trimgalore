@@ -1,0 +1,56 @@
+cd /media/inter/mchai/AccipiterGenomics/results
+mkdir TrimGalore #macht den Ordner TrimGalore im Ordner Results
+touch trimgalore_Accipiter_log.txt #macht ein file
+
+awk '{if(NR%4==2) print length($0)}' Lib_A_1.fastq.gz| sort -n | head -n1 # to get quick impression of minimum and maximum read length of the fastq file
+
+echo '''
+#!/bin/sh
+#Name of Job
+#PBS -N trimgalore_Accipiter
+
+#Redirect output stream to this file
+#PBS -o /media/inter/mchai/AccipiterGenomics/PBSoutput.logfiles/LibH_trimgalore
+
+#puts Standard Error to output
+#PBS -j oe
+
+#choose walltime of two hours
+#PBS -l walltime=2:00:00
+
+#Select a maximum of 20 cores and 200gb of RAM
+#PBS -l select=1:ncpus=20:mem=200gb
+
+### load dependencies ###
+#load Trim Galore into environment, load all necessary software into environment before starting
+source /opt/anaconda3/etc/profile.d/conda.sh
+conda activate trim-galore-0.6.2
+
+#### run analyses ###
+
+#Trim Galore \
+#--fastq ~/media/inter/mchai/AccipiterGenomics/data/Test100k.Lib_Atest_1.fastq.gz
+#-o ~/media/inter/mchai/AccipiterGenomics/results/Trim Galore \
+#-p alldata #preserve timestamp and other useful info
+
+cd /media/inter/mchai/AccipiterGenomics/results/TrimGalore
+#mkdir testrunB_12012022
+mkdir LibH
+#cd /media/inter/mchai/AccipiterGenomics/data/testdata
+cd /media/inter/mchai/AccipiterGenomics/data/HN00160148
+
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/testrunB_120122 Test100k.Lib_Atest_1.fastq.gz Test100k.Lib_Atest_2.fastq.gz
+
+### using TrimGalore to trim all libraries 26.02.2022 ####
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibA Lib_A_1.fastq.gz Lib_A_2.fastq.gz
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibC Lib_C_1.fastq.gz Lib_C_2.fastq.gz
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibD Lib_D_1.fastq.gz Lib_D_2.fastq.gz
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibE Lib_E_1.fastq.gz Lib_E_2.fastq.gz
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibF Lib_F_1.fastq.gz Lib_F_2.fastq.gz
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibG Lib_G_1.fastq.gz Lib_G_2.fastq.gz
+trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibH Lib_H_1.fastq.gz Lib_H_2.fastq.gz
+
+
+''' > /media/inter/mchai/AccipiterGenomics/shell/trimgaloreAccipiter_qsub.sh
+
+qsub /media/inter/mchai/AccipiterGenomics/shell/trimgaloreAccipiter_qsub.sh

@@ -1,0 +1,37 @@
+# run populations after gstacks 19.05.2022
+
+echo """
+#!/bin/sh
+
+## name of Job
+#PBS -N 19052022_populations
+
+## redirect output stream to this file
+#PBS -o /media/inter/mchai/AccipiterGenomics/PBSoutput.logfiles/1st_log.txt
+
+## Stream Standard output and standard Error to outputfile
+#PBS -j oe
+
+## Select a maximum of 200 cores and 400gb of RAM
+#PBS -l select=1:ncpus=10:mem=200gb
+
+#### load dependencies
+module load NGSmapper/stacks-2.59
+
+#### run analyses
+populations -P /media/inter/mchai/AccipiterGenomics/results/referenced_aligned \
+--vcf \
+-t 10 \
+-M /media/inter/mchai/AccipiterGenomics/data/population_map/popmap_all.txt \
+-O /media/inter/mchai/AccipiterGenomics/results/Output_populations \
+-r 0.65 \
+--genepop \
+--structure  \
+--fstats  \
+--phylip  \
+--plink \
+--hwe
+
+""" > /media/inter/mchai/AccipiterGenomics/shell/Populations_qsub
+
+qsub /media/inter/mchai/AccipiterGenomics/shell/Populations_qsub

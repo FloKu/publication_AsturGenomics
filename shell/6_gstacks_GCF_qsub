@@ -1,0 +1,19 @@
+
+#!/bin/sh # the shebang - needed so that the sh is called (the hash in the shebang is part of the command)
+## Script to run gstacks, Florian Kunz, 25.01.24, 
+
+# 0) openPBS
+#********************
+#PBS -N gstacks
+#PBS -o /media/inter/fkunz/2022_Accipiter/openPBS_logfiles_gstacksmerged
+#PBS -j oe
+#PBS -l select=1:ncpus=50:mem=200gb
+
+# 1) preface
+#*******************
+module load NGSmapper/stacks-2.59
+
+# 1) analysis
+#*******************
+gstacks -I /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF   -M /media/inter/fkunz/2022_Accipiter/data/popmaps/popmap_GCF_merge.txt   -O /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF   -t 50
+

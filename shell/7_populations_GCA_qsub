@@ -1,0 +1,19 @@
+
+#!/bin/sh # the shebang - needed so that the sh is called (the hash in the shebang is part of the command)
+## Script to run populations, Florian Kunz, 01.02.23
+
+# 0) openPBS
+#********************
+#PBS -N population
+#PBS -o /media/inter/fkunz/2022_Accipiter/openPBS_logfiles
+#PBS -j oe
+#PBS -l select=1:ncpus=50:mem=200gb
+
+# 1) preface
+#*******************
+module load NGSmapper/stacks-2.59
+
+# 2) analysis
+#*******************
+populations   --in-path /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCA   --out-path /media/inter/fkunz/2022_Accipiter/results/populations_alldata_GCA   --popmap /media/inter/fkunz/2022_Accipiter/data/popmaps/popmap_GCA.txt   --threads 50   -r 0.5   -p 2   --write-random-snp   --genepop   --structure   --fstat   --plink   --vcf
+

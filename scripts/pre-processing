@@ -1,0 +1,151 @@
+#trimgalore for quality trimming
+
+cd /media/inter/mchai/AccipiterGenomics/results
+mkdir TrimGalore #macht den Ordner TrimGalore im Ordner Results
+touch trimgalore_Accipiter_log.txt #macht ein file
+
+awk '{if(NR%4==2) print length($0)}' Lib_A_1.fastq.gz| sort -n | head -n1 # to get quick impression of minimum and maximum read length of the fastq file
+
+echo '''
+#!/bin/sh
+#Name of Job
+#PBS -N trimgalore_Accipiter
+
+#Redirect output stream to this file
+#PBS -o /media/inter/mchai/AccipiterGenomics/PBSoutput.logfiles/LibH_trimgalore
+
+#puts Standard Error to output
+#PBS -j oe
+
+#choose walltime of two hours
+#PBS -l walltime=2:00:00
+
+#Select a maximum of 20 cores and 200gb of RAM
+#PBS -l select=1:ncpus=20:mem=200gb
+
+### load dependencies ###
+#load Trim Galore into environment, load all necessary software into environment before starting
+source /opt/anaconda3/etc/profile.d/conda.sh
+conda activate trim-galore-0.6.2
+
+#### run analyses ###
+
+#Trim Galore \
+#--fastq ~/media/inter/mchai/AccipiterGenomics/data/Test100k.Lib_Atest_1.fastq.gz
+#-o ~/media/inter/mchai/AccipiterGenomics/results/Trim Galore \
+#-p alldata #preserve timestamp and other useful info
+
+cd /media/inter/mchai/AccipiterGenomics/results/TrimGalore
+#mkdir testrunB_12012022
+mkdir LibH
+#cd /media/inter/mchai/AccipiterGenomics/data/testdata
+cd /media/inter/mchai/AccipiterGenomics/data/HN00160148
+
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/testrunB_120122 Test100k.Lib_Atest_1.fastq.gz Test100k.Lib_Atest_2.fastq.gz
+
+### using TrimGalore to trim all libraries 26.02.2022 ####
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibA Lib_A_1.fastq.gz Lib_A_2.fastq.gz
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibC Lib_C_1.fastq.gz Lib_C_2.fastq.gz
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibD Lib_D_1.fastq.gz Lib_D_2.fastq.gz
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibE Lib_E_1.fastq.gz Lib_E_2.fastq.gz
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibF Lib_F_1.fastq.gz Lib_F_2.fastq.gz
+#trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibG Lib_G_1.fastq.gz Lib_G_2.fastq.gz
+trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibH Lib_H_1.fastq.gz Lib_H_2.fastq.gz
+
+
+''' > /media/inter/mchai/AccipiterGenomics/shell/trimgaloreAccipiter_qsub.sh
+
+qsub /media/inter/mchai/AccipiterGenomics/shell/trimgaloreAccipiter_qsub.sh
+
+################################################################################################
+# removing PCR duplicates with clone filter
+# cd media/inter/mchai/AccipiterGenomics/results/TrimGalore/testrunB_120122
+
+echo '''
+#!/bin/bash
+
+#Name of Job
+#PBS -N clonefilterAccipiter
+
+#Redirect output stream to this file
+#PBS -o /media/inter/mchai/AccipiterGenomics/PBSoutput.logfiles/LibH_clonefilter
+
+#puts Standard Error to output
+#PBS -j oe
+
+#choose walltime of two hours
+#PBS -l walltime=2:00:00
+
+#Select a maximum of 20 cores and 200gb of RAM
+#PBS -l select=1:ncpus=20:mem=200gb
+
+# load stacks environment
+module load NGSmapper/stacks-2.59
+
+#cd /media/inter/mchai/AccipiterGenomics/results/TrimGalore/testrunB_120122
+mkdir /media/inter/mchai/AccipiterGenomics/results/Stacks/clonefilter/LibH
+cd /media/inter/mchai/AccipiterGenomics/results/TrimGalore/LibH
+
+#clone_filter -1 ./Test100k.Lib_Atest_1_val_1.fq.gz -2 ./Test100k.Lib_Atest_2_val_2.fq.gz -i gzfastq --inline_inline --oligo_len_1 0 --oligo_len_2 4 -o /media/inter/mchai/AccipiterGenomics/results/Stacks/clonefilter/testrunB
+
+#clone_filter -1 ./Lib_A_1_val_1.fq.gz -2 ./Lib_A_2_val_2.fq.gz -i gzfastq --inline_inline --oligo_len_1 0 --oligo_len_2 4 -o /media/inter/mchai/AccipiterGenomics/results/Stacks/clonefilter/LibA
+#clone_filter -1 ./Lib_B_1_val_1.fq.gz -2 ./Lib_B_2_val_2.fq.gz -i gzfastq --inline_inline --oligo_len_1 0 --oligo_len_2 4 -o /media/inter/mchai/AccipiterGenomics/results/Stacks/clonefilter/LibB
+#clone_filter -1 ./Lib_C_1_val_1.fq.gz -2 ./Lib_C_2_val_2.fq.gz -i gzfastq --inline_inline --oligo_len_1 0 --oligo_len_2 4 -o /media/inter/mchai/AccipiterGenomics/results/Stacks/clonefilter/LibC
+#clone_filter -1 ./Lib_D_1_val_1.fq.gz -2 ./Lib_D_2_val_2.fq.gz -i gzfastq --inline_inline --oligo_len_1 0 --oligo_len_2 4 -o /media/inter/mchai/AccipiterGenomics/results/Stacks/clonefilter/LibD
+#clone_filter -1 ./Lib_E_1_val_1.fq.gz -2 ./Lib_E_2_val_2.fq.gz -i gzfastq --inline_inline --oligo_len_1 0 --oligo_len_2 4 -o /media/inter/mchai/AccipiterGenomics/results/Stacks/clonefilter/LibE
+#clone_filter -1 ./Lib_F_1_val_1.fq.gz -2 ./Lib_F_2_val_2.fq.gz -i gzfastq --inline_inline --oligo_len_1 0 --oligo_len_2 4 -o /media/inter/mchai/AccipiterGenomics/results/Stacks/clonefilter/LibF
+#clone_filter -1 ./Lib_G_1_val_1.fq.gz -2 ./Lib_G_2_val_2.fq.gz -i gzfastq --inline_inline --oligo_len_1 0 --oligo_len_2 4 -o /media/inter/mchai/AccipiterGenomics/results/Stacks/clonefilter/LibG
+clone_filter -1 ./Lib_H_1_val_1.fq.gz -2 ./Lib_H_2_val_2.fq.gz -i gzfastq --inline_inline --oligo_len_1 0 --oligo_len_2 4 -o /media/inter/mchai/AccipiterGenomics/results/Stacks/clonefilter/LibH
+
+
+''' > /media/inter/mchai/AccipiterGenomics/shell/clonefilterAccipiter_qsub.sh
+
+qsub /media/inter/mchai/AccipiterGenomics/shell/clonefilterAccipiter_qsub.sh
+
+#################################################################################################
+# demultiplex by stacks with process_radtags 24.01.2022
+cd /media/inter/mchai/AccipiterGenomics/
+
+echo '''
+#!/bin/bash
+
+#Name of Job
+#PBS -N demultiplexAccipiter
+
+#Redirect output stream to this file
+#PBS -o /media/inter/mchai/AccipiterGenomics/PBSoutput.logfiles/LibD_demultiplex
+
+#puts Standard Error to output
+#PBS -j oe
+
+#choose walltime of two hours
+#PBS -l walltime=2:00:00
+
+#Select a maximum of 20 cores and 200gb of RAM
+#PBS -l select=1:ncpus=20:mem=200gb
+
+# load stacks environment
+# install pipeline
+module load NGSmapper/stacks-2.59
+#source /sw/batch/init.sh                          #diese Zeile muss immer dabei sein
+#module switch env env/2017Q2-gcc-openmpi          #muss immer dabei sein
+#source ~/.bashrc
+
+mkdir /media/inter/mchai/AccipiterGenomics/results/Stacks/demultiplexed/LibD
+cd /media/inter/mchai/AccipiterGenomics/results/Stacks/clonefilter/LibD
+
+# For each pool a separate demultiplexing run has to be started because barcodes are duplicated between pools
+#process_radtags -P --inline_inline -1 ./Test100k.Lib_Atest_1_val_1.1.fq.gz -2 ./Test100k.Lib_Atest_2_val_2.2.fq.gz -i gzfastq -o /media/inter/mchai/AccipiterGenomics/results/Stacks/demultiplexed/testrunB/ -c -q -r --renz_1 ecoRI --renz_2 mspI -b /media/inter/mchai/AccipiterGenomics/data/barcodes_LibA.txt
+
+#process_radtags -P --inline_inline -1 ./Lib_A_1_val_1.1.fq.gz -2 ./Lib_A_2_val_2.2.fq.gz -i gzfastq -o /media/inter/mchai/AccipiterGenomics/results/Stacks/demultiplexed/LibA/ -c -q -r --renz_1 ecoRI --renz_2 mspI -b /media/inter/mchai/AccipiterGenomics/data/barcodes/barcodes_LibA.txt
+#process_radtags -P --inline_inline -1 ./Lib_B_1_val_1.1.fq.gz -2 ./Lib_B_2_val_2.2.fq.gz -i gzfastq -o /media/inter/mchai/AccipiterGenomics/results/Stacks/demultiplexed/LibB/ -c -q -r --renz_1 ecoRI --renz_2 mspI -b /media/inter/mchai/AccipiterGenomics/data/barcodes/barcodes_LibB.txt
+#process_radtags -P --inline_inline -1 ./Lib_C_1_val_1.1.fq.gz -2 ./Lib_C_2_val_2.2.fq.gz -i gzfastq -o /media/inter/mchai/AccipiterGenomics/results/Stacks/demultiplexed/LibC/ -c -q -r --renz_1 ecoRI --renz_2 mspI -b /media/inter/mchai/AccipiterGenomics/data/barcodes/barcodes_LibC.txt
+process_radtags -P --inline_inline -1 ./Lib_D_1_val_1.1.fq.gz -2 ./Lib_D_2_val_2.2.fq.gz -i gzfastq -o /media/inter/mchai/AccipiterGenomics/results/Stacks/demultiplexed/LibD/ -c -q -r --renz_1 ecoRI --renz_2 mspI -b /media/inter/mchai/AccipiterGenomics/data/barcodes/barcodes_LibD.txt
+#process_radtags -P --inline_inline -1 ./Lib_E_1_val_1.1.fq.gz -2 ./Lib_E_2_val_2.2.fq.gz -i gzfastq -o /media/inter/mchai/AccipiterGenomics/results/Stacks/demultiplexed/LibE/ -c -q -r --renz_1 ecoRI --renz_2 mspI -b /media/inter/mchai/AccipiterGenomics/data/barcodes/barcodes_LibE.txt
+#process_radtags -P --inline_inline -1 ./Lib_F_1_val_1.1.fq.gz -2 ./Lib_F_2_val_2.2.fq.gz -i gzfastq -o /media/inter/mchai/AccipiterGenomics/results/Stacks/demultiplexed/LibF/ -c -q -r --renz_1 ecoRI --renz_2 mspI -b /media/inter/mchai/AccipiterGenomics/data/barcodes/barcodes_LibF.txt
+#process_radtags -P --inline_inline -1 ./Lib_G_1_val_1.1.fq.gz -2 ./Lib_G_2_val_2.2.fq.gz -i gzfastq -o /media/inter/mchai/AccipiterGenomics/results/Stacks/demultiplexed/LibG/ -c -q -r --renz_1 ecoRI --renz_2 mspI -b /media/inter/mchai/AccipiterGenomics/data/barcodes/barcodes_LibG.txt
+#process_radtags -P --inline_inline -1 ./Lib_H_1_val_1.1.fq.gz -2 ./Lib_H_2_val_2.2.fq.gz -i gzfastq -o /media/inter/mchai/AccipiterGenomics/results/Stacks/demultiplexed/LibH/ -c -q -r --renz_1 ecoRI --renz_2 mspI -b /media/inter/mchai/AccipiterGenomics/data/barcodes/barcodes_LibH.txt
+
+''' > /media/inter/mchai/AccipiterGenomics/shell/demultiplexedAccipiter_qsub.sh
+
+qsub /media/inter/mchai/AccipiterGenomics/shell/demultiplexedAccipiter_qsub.sh

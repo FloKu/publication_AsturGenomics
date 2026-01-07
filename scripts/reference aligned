@@ -1,0 +1,61 @@
+# reference align LibA to the reference genome 11.05.2022
+
+for name in /media/inter/mchai/AccipiterGenomics/results/Stacks/demultiplexed/LibH/*.rem.1.fq.gz
+
+  do
+
+    #echo $name
+
+    temp=${name%%.*}
+    ID=${temp##*/}
+    dir=${temp%/*}
+
+    echo $ID
+
+    echo """
+
+    #!/bin/bash
+
+    #Name of Job
+    #PBS -N BWA_${ID}
+
+    #Redirect output stream to this file
+    #PBS -o /media/inter/mchai/AccipiterGenomics/PBSoutput_${ID}.logfiles
+
+    #puts Standard Error to output
+    #PBS -j oe
+
+    #choose walltime of two hours
+    #PBS -l walltime=2:00:00
+
+    #Select a maximum of 20 cores and 200gb of RAM
+    #PBS -l select=1:ncpus=20:mem=200gb
+
+    # load bwa environment
+    module load NGSmapper/bwa-0.7.13
+    module load Tools/samtools-1.12
+
+    bwa mem /media/inter/mchai/AccipiterGenomics/reference_data/GCA_929443795.1_bAccGen1.1_genomic.fna.gz \
+    ${dir}'/'${ID}'.1.fq.gz' \
+    ${dir}'/'${ID}'.2.fq.gz' \
+    | samtools view -bh \
+    | samtools sort > '/media/inter/mchai/AccipiterGenomics/results/referenced_aligned/'${ID}'.bam'
+
+    """ > /media/inter/mchai/AccipiterGenomics/shell/QSUB_${ID}.sh
+
+    qsub /media/inter/mchai/AccipiterGenomics/shell/QSUB_${ID}.sh
+
+
+done
+
+# have a look on the sequences 11.05.2022
+
+## then index BAM files
+
+samtools index *.bam
+
+## then load IGViewer
+
+sh /opt/bioinformatics/IGV_Linux_2.10.2/igv.sh
+
+## then choose "Load file" and Select bam file of interest
