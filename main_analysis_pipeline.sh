@@ -56,15 +56,14 @@ qsub /media/inter/fkunz/2022_Accipiter/shell/1_trimgalore.sh
 # peak into output file
 zcat /media/inter/fkunz/2022_Accipiter/results/clonefilter_alldata/Lib_D_1_val_1.1.fq.gz | head -8 # look on the first 8 lines of the fastq.gz file
 
+
 # 2) and 3) Removing clones using clone filter, then demultiplexing (steps taken together)
 #*****************************
 # Clone filter: 
 # This section will create and run the subscript to run clone_filter pipeline from STACKS
-# All output data is written into the same folder
 
 # Demultiplexing:
 # This section will create and run the subscript to run the process_radtags pipeline from STACKS
-# All output data is written into the same folder "demultiplex_alldata"
 # Ouput: Per indivvidual one forward fastq, one reverse fastq, one forward fastq of remained loci and one reverse fastq of remained loci
 
 echo '''
@@ -166,9 +165,6 @@ zcat /media/inter/fkunz/2022_Accipiter/results/demultiplex_alldata/Agengentilis1
 cat /media/inter/fkunz/2022_Accipiter/data/Gentilis_reference/GCF_929443795.1/GCF_929443795.1_bAccGen1.1_genomic.fna | head -5 # first 5 lines
 grep -Inr ">" /media/inter/fkunz/2022_Accipiter/data/Gentilis_reference/GCF_929443795.1/GCF_929443795.1_bAccGen1.1_genomic.fna | head -45 # all lines beginning with ">"
 
-# As we were not sure about the differences in using GCF or GCA, the following pipeline (sample mapping, nisus mapping, gstacks, populations) was run for both
-
-
 # 4.1) Index reference genome (a necessary step)
 #*****************************
 # According to bwa manual, every sequence needs to be indexed before being alligned
@@ -192,11 +188,9 @@ module load NGSmapper/bwa-0.7.13
 
 # 2)  indexing
 #*******************
-bwa index /media/inter/fkunz/2022_Accipiter/data/Gentilis_reference/GCA_929447715.1/GCA_929447715.1_bAccGen1.1_alternate_haplotype_genomic.fna
 bwa index /media/inter/fkunz/2022_Accipiter/data/Gentilis_reference/GCF_929443795.1/GCF_929443795.1_bAccGen1.1_genomic.fna 
 ''' > /media/inter/fkunz/2022_Accipiter/shell/mapping/4_indexing.sh
 qsub /media/inter/fkunz/2022_Accipiter/shell/mapping/4_indexing.sh
-
 
 # 4.2) Mapping samples to GCF (reference genome)
 #*****************************
@@ -230,49 +224,10 @@ for name in /media/inter/fkunz/2022_Accipiter/results/demultiplex_alldata/*.rem.
     qsub /media/inter/fkunz/2022_Accipiter/shell/mapping/4_reference_alligned_${ID}.sh
 done
 
-
-# 4.3) Mapping samples to GCA (alternative genome)
+# 4.3) Checking quality of reads and mapping
 #***********************************************
-# not done: indexing the individual bam files. This is needed later on (step 7.3) and done then, but could have been done here
-mkdir /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCA
-
-for name in /media/inter/fkunz/2022_Accipiter/results/demultiplex_alldata/*.rem.1.fq.gz
-  do
-    #echo $name
-    temp=${name%%.*}
-    ID=${temp##*/}
-    dir=${temp%/*}
-    echo $ID
-    echo """
-    #!/bin/sh # the shebang - needed so that the sh is called (the hash in the shebang is part of the command)
-    ## Script to reference-based mapping, Florian Kunz, 01.02.23
-    #PBS -N BWA_${ID}
-    #PBS -o /media/inter/fkunz/2022_Accipiter/openPBS_logfiles/4_BWA_${ID}.logfile
-    #PBS -j oe
-    #PBS -l select=1:ncpus=20:mem=200gb
-    # load bwa environment
-    module load NGSmapper/bwa-0.7.13
-    module load Tools/samtools-1.12
-    # run BWA to map, then SAMTOOLS to convert to bam file and sort it
-    bwa mem /media/inter/fkunz/2022_Accipiter/data/Gentilis_reference/GCA_929447715.1/GCA_929447715.1_bAccGen1.1_alternate_haplotype_genomic.fna \
-    ${dir}'/'${ID}'.1.fq.gz' \
-    ${dir}'/'${ID}'.2.fq.gz' \
-    | samtools view -bh \
-    | samtools sort > '/media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCA/'${ID}'.bam'
-    """ > /media/inter/fkunz/2022_Accipiter/shell/mapping/4_reference_alligned_${ID}.sh
-    qsub /media/inter/fkunz/2022_Accipiter/shell/mapping/4_reference_alligned_${ID}.sh
-done
-
-
-# 4.4) Checking quality of reads and mapping
-#***********************************************
-# This section (quality check) could be implemented in the loop above, by making use of the fact that we loop already using the ID variable
-# It is currently its own script, as I didnt want to wait another 5 days for the mapping again
 # samtools and qualimap are used
 # mappedreads.txt: includes the sample names, the number of reads, the number of mapped reads and the percentage of mapped reads
-
-# ACHTUNG: das folgende script funktioniert -> kann aber nicht mit echo """ erzeugt werden, weil die Elemente nach dem $ nicht eingefügt werden. 
-# Das Skript muss also händisch adaptiert werden.
 
 echo """
 #!/bin/sh # the shebang - needed so that the sh is called (the hash in the shebang is part of the command)
@@ -286,7 +241,6 @@ module load Tools/samtools-1.12
 module load Tools/qualimap-2.2.1
 # make directories
 mkdir /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/qualimap
-mkdir /media/innder constructionter/fkunz/2022_Accipiter/results/reference_aligned_GCA/qualimap
 # do the looping
 cd /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF
 for file in *.bam
@@ -296,193 +250,14 @@ for file in *.bam
     printf %s "${file} " >> mappedreads.txt && samtools flagstat $file | awk 'NR==1 {printf $1" "} NR==5 {printf $1" "} NR==5 {printf "%s\n", $5}' | tr -d '(' >> mappedreads.txt
     qualimap bamqc -bam $file -nt 20 -outdir /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/qualimap -outfile ${ID}.pdf
 done
-
-cd /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCA
-for file in *.bam
-  do
-    temp=${file%%.*}
-    ID=${temp##*/}
-    printf %s "${file} " >> mappedreads.txt && samtools flagstat $file | awk 'NR==1 {printf $1" "} NR==5 {printf $1" "} NR==5 {printf "%s\n", $5}' | tr -d '(' >> mappedreads.txt
-    qualimap bamqc -bam $file -nt 20 -outdir /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCA/qualimap -outfile ${ID}.pdf
-done
 """ > /media/inter/fkunz/2022_Accipiter/shell/4_qualimap.sh
 qsub /media/inter/fkunz/2022_Accipiter/shell/4_qualimap.sh
 
-
-# 4.5) merge the duplicates of samples
-#***********************************************
-# Code by Min and Susi. 
-# For bad individuals, Min made two extractions/genotypings for 10 individuals and three repeats for one. 
-# These repeats are now merged into one single bam file.  
-# We will merge the individuals, then move the orginal repeats while keeping the merged ones in the folder for further processing.
-
-# For 146: this is a special case. Original extract clusters with other temminckii, while W2 and W3 cluster with henstiis.
-# I assume problem with W2 and W3 and will only include original one in the analyses, no merging. 
-
-# List of the 11 duplicates
-# 1 Agenarrigonii51 with Agenarrigonii51W2
-# 2 Agenmarginatus64 with Agenmarginatus64W2
-# 3 Agenbuteoides82 with Agenbuteoides82W2
-# 4 Agenschvedowi106 with Agenschvedowi106W2
-# 5 Agenalbidus119 with Agenalbidus119W2
-# 6 Agenatricapillus128 with Agenatricapillus128W2
-# 7 Agenatricapillus129 with Agenatricapillus129W2
-# 8 Ahenstii136 with Ahenstii136W2
-# 9 Ahenstii137 with Ahenstii137W2
-# 10 Amelmelanoleucus141 with Amelmelanoleucus141W2
-# 11 Amelmelanoleucus146 with Amelmelanoleucus146W2 and Amelmelanoleucus146W3
- 
-# merge
-module load Tools/samtools-1.12
-cd /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF
-
-samtools merge Amelmelanoleucus141merged.bam Amelmelanoleucus141.bam Amelmelanoleucus141W2.bam
-samtools merge Ameltemminckii146merged.bam Ameltemminckii146.bam Ameltemminckii146W2.bam Ameltemminckii146W3.bam
-samtools merge Agenarrigonii51merged.bam Agenarrigonii51.bam Agenarrigonii51W2.bam
-samtools merge Agenatricapillus128merged.bam Agenatricapillus128.bam Agenatricapillus128W2.bam 
-samtools merge Agenatricapillus129merged.bam Agenatricapillus129.bam Agenatricapillus129W2.bam 
-samtools merge Agenschvedowi106merged.bam Agenschvedowi106.bam Agenschvedowi106W2.bam 
-samtools merge Ahenstii137merged.bam Ahenstii137.bam Ahenstii137W2.bam
-samtools merge Ahenstii136merged.bam Ahenstii136.bam Ahenstii136W2.bam
-samtools merge Agenalbidus119merged.bam Agenalbidus119.bam Agenalbidus119W2.bam
-samtools merge Agenbuteoides82merged.bam Agenbuteoides82.bam Agenbuteoides82W2.bam
-samtools merge Agenmarginatus64merged.bam Agenmarginatus64.bam Agenmarginatus64W2.bam
-
-# indexing I believe is not necessary for STACKS, but could be done here if needed
-
-# move originals
-mkdir /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Amelmelanoleucus141.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Amelmelanoleucus141W2.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Ameltemminckii146.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Ameltemminckii146W2.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Ameltemminckii146W3.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenarrigonii51.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenarrigonii51W2.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenatricapillus128.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenatricapillus128W2.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenatricapillus129.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenatricapillus129W2.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenschvedowi106.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenschvedowi106W2.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Ahenstii137.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Ahenstii137W2.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Ahenstii136.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Ahenstii136W2.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenalbidus119.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenalbidus119W2.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenbuteoides82.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenbuteoides82W2.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenmarginatus64.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-mv Agenmarginatus64W2.bam /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF/original_duplicates
-
-
 # 5) gstacks on samples 
 #*****************************
-# run gstacks to build loci from the paired-end data
-# Originally, we included BWA aligned A nisus in gstacks as well.
-#   However, Stacks couldnt cope with A nisus for some reason, so now we create outgroup AFTER stacks pipeline. 
-# Also, we tried gstacks and populations on merged individuals (merging from step 4.5), but this didnt work.
-#   Solution: manually delete BAM files of the WH individuals.
-
-
-# 5.1)    **NOT IN USE**         gstacks on GCF mapped samples, all samples
-#*****************************
-# Idea: 96 individuals, including 12 duplicates.
-# Currently in this folder (reference_aligned_GCF) there are the merged individuals -> this proved to be unuseful.
-
-echo """
-#!/bin/sh # the shebang - needed so that the sh is called (the hash in the shebang is part of the command)
-## Script to run gstacks, Florian Kunz, 25.01.24, 
-
-# 0) openPBS
-#********************
-#PBS -N gstacks
-#PBS -o /media/inter/fkunz/2022_Accipiter/openPBS_logfiles_gstacksmerged
-#PBS -j oe
-#PBS -l select=1:ncpus=50:mem=200gb
-
-# 1) preface
-#*******************
-module load NGSmapper/stacks-2.59
-
-# 1) analysis
-#*******************
-gstacks -I /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF \
-  -M /media/inter/fkunz/2022_Accipiter/data/popmaps/popmap_GCF_merge.txt \
-  -O /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF \
-  -t 50
-""" > /media/inter/fkunz/2022_Accipiter/shell/6_gstacks_GCF_qsub
-qsub /media/inter/fkunz/2022_Accipiter/shell/6_gstacks_GCF_qsub
-
-
-# 5.2) gstacks on samples, GCF, without duplicates (the individuals with WH on them)
-#*****************************
-# This run is based on all individuals, but duplicates were manually removed from the "referenced_aligned_GCF" folder. 
-# Run on 83 individuals. 
-
-echo """
-#!/bin/sh # the shebang - needed so that the sh is called (the hash in the shebang is part of the command)
-## Script to run gstacks, Florian Kunz, 12.03.24 
-
-# 0) openPBS
-#********************
-#PBS -N gstacks
-#PBS -o /media/inter/fkunz/2022_Accipiter/openPBS_logfiles/gstacksnodups
-#PBS -j oe
-#PBS -l select=1:ncpus=50:mem=200gb
-
-# 1) preface
-#*******************
-module load NGSmapper/stacks-2.59
-
-# 1) analysis
-#*******************
-gstacks -I /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF_NODups \
-  -M /media/inter/fkunz/2022_Accipiter/data/popmaps/popmap_GCF_nodups.txt \
-  -O /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF_NODups \
-  -t 50
-""" > /media/inter/fkunz/2022_Accipiter/shell/6_gstacks_GCF_nodups_qsub
-qsub /media/inter/fkunz/2022_Accipiter/shell/6_gstacks_GCF_nodups_qsub
-
-
-# 5.3) gstacks on samples NOWH146, GCF
-#*****************************
-# This run is based on all individuals, from the "referenced_aligned_GCF" folder, but WH146 was removed (this was that one run were the WH was no identical to the original).
-# Run on 93 individuals (94 in total, but one WH less). 
-
-echo """
-#!/bin/sh # the shebang - needed so that the sh is called (the hash in the shebang is part of the command)
-## Script to run gstacks, Florian Kunz, 12.03.24 
-
-# 0) openPBS
-#********************
-#PBS -N gstacks
-#PBS -o /media/inter/fkunz/2022_Accipiter/openPBS_logfiles/gstacksnowh16
-#PBS -j oe
-#PBS -l select=1:ncpus=50:mem=200gb
-
-# 1) preface
-#*******************
-module load NGSmapper/stacks-2.59
-
-# 1) analysis
-#*******************
-gstacks -I /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF_NOWH146 \
-  -M /media/inter/fkunz/2022_Accipiter/data/popmaps/popmap_GCF_nowh146.txt \
-  -O /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF_NOWH146 \
-  -t 50
-""" > /media/inter/fkunz/2022_Accipiter/shell/6_gstacks_GCF_no146_qsub
-qsub /media/inter/fkunz/2022_Accipiter/shell/6_gstacks_GCF_no146_qsub
-
-
-# 5.4) FINAL gstacks on samples, GCF, without duplicates (by chosing the ones with lower missing data) and without inds with high missing data (<90%)
-#*****************************
-# This run is the final one.
-# Individuals were chosen after countless runs and information about missing data per individual.
-# We removed duplicates and individuals with missing data of more than 90%.
-# We also removed 146W2 and W3, as these were the problematic runs.. as 146 has 95% missing data, no 146 will be represented.
-# Finally, 63 individuals remain.
+# run gstacks to build loci from the paired-end data without outgroup (will be included later in the script)
+# We ran the pipeline with all samples, including twelve duplicates of eleven samples, to check for consistency of our pipeline.
+# After checking, we removed all duplicates as well as all samples with high percentage of missing data (<90%)
 
 echo """
 #!/bin/sh # the shebang - needed so that the sh is called (the hash in the shebang is part of the command)
@@ -505,189 +280,15 @@ gstacks -I /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF_FINAL
   -M /media/inter/fkunz/2022_Accipiter/data/popmaps/popmap_GCF_FINAL.txt \
   -O /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF_FINAL \
   -t 50
-""" > /media/inter/fkunz/2022_Accipiter/shell/6_gstacks_GCF_final_qsub
-qsub /media/inter/fkunz/2022_Accipiter/shell/6_gstacks_GCF_final_qsub
-
+""" > /media/inter/fkunz/2022_Accipiter/shell/5_gstacks_GCF_final_qsub.sh
+qsub /media/inter/fkunz/2022_Accipiter/shell/5_gstacks_GCF_final_qsub.sh
 
 # 6) populations after gstacks
 #*****************************
-# Parameters which need to be decided: 
-# -R: minimum percentage of individuals across populations required to process a locus - we dont use that one
-# -r: minimum percentage of individuals in a population required to process a locus for that population
-# -p: minimum number of populations a locus must be present in to process a locus
-# --write-random-snp: restrict data analysis to only one random SNP per locus.
-
-# If number of individuals is comparable between populations, use R, if not, use r.
-
-# -R not used
-# -r small because we have low quality data - take 50% to force at least 2 out of 3 individuals or 2 out of 4 individuals
-# -p (to capture all loci that are present at least in two "species")
-
-# Final Settings Options 
-#***************
-#   liberal   conservative  Mins original settings 
-#   -r 0.5    -r 0.75       -r 0.6
-#   -p 2      -p 4          -p 4
-#                           -R 0.8
-
-# RESULTS from various pre-runs
-#~~~~~~~~~~~~~
-# conservative is way to limiting, only 135 SNPs remained
-# liberal sounds good, 37.000 SNPs remained
-# Note that we did cleaning and filtering throughout several steps in STACKS already, so liberal does not mean faulty
-
-
-# 6.1) **WAS USED IN PRE-RUNS, NOT IN USE ANYMORE**  populations on GCF mapped samples and merged samples, liberal run
-#*****************************
-echo """
-#!/bin/sh # the shebang - needed so that the sh is called (the hash in the shebang is part of the command)
-## Script to run populations, Florian Kunz, 25.01.24
-
-# 0) openPBS
-#********************
-#PBS -N population
-#PBS -o /media/inter/fkunz/2022_Accipiter/openPBS_logfiles
-#PBS -j oe
-#PBS -l select=1:ncpus=50:mem=200gb
-
-# 1) preface
-#*******************
-module load NGSmapper/stacks-2.59
-
-# 2) analysis
-#*******************
-populations \
-  --in-path /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF \
-  --out-path /media/inter/fkunz/2022_Accipiter/results/populations_alldata_GCF_liberal \
-  --popmap /media/inter/fkunz/2022_Accipiter/data/popmaps/popmap_GCF_merge.txt \
-  --threads 50 \
-  -r 0.5 \
-  -p 2 \
-  --write-random-snp \
-  --genepop \
-  --structure \
-  --fstat \
-  --plink \
-  --vcf
-""" > /media/inter/fkunz/2022_Accipiter/shell/7_populations_GCF_lib_qsub
-qsub /media/inter/fkunz/2022_Accipiter/shell/7_populations_GCF_lib_qsub
-
-
-# 6.2) **WAS USED IN PRE-RUNS, NOT IN USE ANYMORE** populations on GCF mapped samples and merged samples, conservative run
-#*****************************
-echo """
-#!/bin/sh # the shebang - needed so that the sh is called (the hash in the shebang is part of the command)
-## Script to run populations, Florian Kunz, 25.01.24
-
-# 0) openPBS
-#********************
-#PBS -N population
-#PBS -o /media/inter/fkunz/2022_Accipiter/openPBS_logfiles
-#PBS -j oe
-#PBS -l select=1:ncpus=50:mem=200gb
-
-# 1) preface
-#*******************
-module load NGSmapper/stacks-2.59
-
-# 2) analysis
-#*******************
-populations \
-  --in-path /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF \
-  --out-path /media/inter/fkunz/2022_Accipiter/results/populations_alldata_GCF_conservative \
-  --popmap /media/inter/fkunz/2022_Accipiter/data/popmaps/popmap_GCF_merge.txt \
-  --threads 50 \
-  -r 0.75 \
-  -p 4 \
-  --write-random-snp \
-  --genepop \
-  --structure \
-  --fstat \
-  --plink \
-  --vcf
-""" > /media/inter/fkunz/2022_Accipiter/shell/7_populations_GCF_cons_qsub
-qsub /media/inter/fkunz/2022_Accipiter/shell/7_populations_GCF_cons_qsub
-
-
-# 6.3) populations on NODUPS
-#*****************************
-mkdir /media/inter/fkunz/2022_Accipiter/results/populations_alldata_GCF_NODUPS
-
-echo """
-#!/bin/sh # the shebang - needed so that the sh is called (the hash in the shebang is part of the command)
-## Script to run populations, Florian Kunz, 12.03.24
-
-# 0) openPBS
-#********************
-#PBS -N population
-#PBS -o /media/inter/fkunz/2022_Accipiter/openPBS_logfiles/populations_nodubps
-#PBS -j oe
-#PBS -l select=1:ncpus=50:mem=200gb
-
-# 1) preface
-#*******************
-module load NGSmapper/stacks-2.59
-
-# 2) analysis
-#*******************
-populations \
-  --in-path /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF_NODups \
-  --out-path /media/inter/fkunz/2022_Accipiter/results/populations_alldata_GCF_NODUPS \
-  --popmap /media/inter/fkunz/2022_Accipiter/data/popmaps/popmap_GCF_nodups.txt \
-  --threads 50 \
-  -r 0.5 \
-  -p 2 \
-  --write-random-snp \
-  --genepop \
-  --structure \
-  --fstat \
-  --plink \
-  --vcf
-""" > /media/inter/fkunz/2022_Accipiter/shell/7_populations_GCF_nodups_qsub
-qsub /media/inter/fkunz/2022_Accipiter/shell/7_populations_GCF_nodups_qsub
-
-
-# 6.4) populations on NOWH146
-#*****************************
-mkdir /media/inter/fkunz/2022_Accipiter/results/populations_alldata_GCF_NOWH146
-
-echo """
-#!/bin/sh # the shebang - needed so that the sh is called (the hash in the shebang is part of the command)
-## Script to run populations, Florian Kunz, 12.03.24
-
-# 0) openPBS
-#********************
-#PBS -N population
-#PBS -o /media/inter/fkunz/2022_Accipiter/openPBS_logfiles/populations_nowh146
-#PBS -j oe
-#PBS -l select=1:ncpus=50:mem=200gb
-
-# 1) preface
-#*******************
-module load NGSmapper/stacks-2.59
-
-# 2) analysis
-#*******************
-populations \
-  --in-path /media/inter/fkunz/2022_Accipiter/results/reference_aligned_GCF_NOWH146 \
-  --out-path /media/inter/fkunz/2022_Accipiter/results/populations_alldata_GCF_NOWH146 \
-  --popmap /media/inter/fkunz/2022_Accipiter/data/popmaps/popmap_GCF_nowh146.txt \
-  --threads 50 \
-  -r 0.5 \
-  -p 2 \
-  --write-random-snp \
-  --genepop \
-  --structure \
-  --fstat \
-  --plink \
-  --vcf
-""" > /media/inter/fkunz/2022_Accipiter/shell/7_populations_GCF_nowh146_qsub
-qsub /media/inter/fkunz/2022_Accipiter/shell/7_populations_GCF_nowh146_qsub
-
-
-# 6.3) FINAL populations (not merged, but duplicates removed and inds. with missing data removed)
-#*****************************
-# This is the run on 63 individuals - without duplicates, without 146 and without inds with more than 90% missing data.
+# After running several runs with different sets of parameters (-R, -r, -p) (conservative runs and liberal runs, we decided on the final set (based on the number of SNPs and signal power retained by the data)
+# -R was not used as the number of individuals per population is not comparable
+# -r was set small due to the 
+# -p was set to capture all loci that are present at least in two "species"
 
 mkdir /media/inter/fkunz/2022_Accipiter/results/populations_alldata_GCF_FINAL
 
@@ -727,10 +328,11 @@ populations \
   --phylip-var-all \
   --gtf \
   --fasta-samples-raw
-""" > /media/inter/fkunz/2022_Accipiter/shell/7_populations_GCF_final_qsub
-qsub /media/inter/fkunz/2022_Accipiter/shell/7_populations_GCF_final_qsub
+""" > /media/inter/fkunz/2022_Accipiter/shell/6_populations_GCF_final_qsub.sh
+qsub /media/inter/fkunz/2022_Accipiter/shell/6_populations_GCF_final_qsub.sh
 
 
+# bis hierher------------------------------------------------------------------------------------------------------------------------------------------------
 
 bis zum Kapitel Nisus (dieses ist schon gecleaned)
 
