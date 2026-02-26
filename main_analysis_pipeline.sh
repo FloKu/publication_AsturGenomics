@@ -1,88 +1,24 @@
 #*****************************
 ## Main shell script for processing sequence data from the ddRAD analyses of the Accipter samples
 #*****************************
-# version 07.01.26, 16.00
-# Florian Kunz, Min Chai, Martin Kapun
+# This script is documentation of the ddRAD processing pipeline, accopmanying the publication: 
+# "Goshawk genomics: Genome wide single nucleotide polymorphisms (SNPs) confirm species status of Astur gentilis and Astur atricapillus"
+# by 
+# Florian Kunz*, Min Chai*, Martin Schwentner, Frank E. Zachos, Martin Kapun, Elisabeth Haring
 
-# This script is documentation of the ddRAD processing pipeline, accopmanying the publication
+# version 26.02.26, 16.00
+# code by Florian Kunz, Min Chai, Martin Kapun
 
-
-######################################################################## AB HIER: Flo muss hier nich drüber arbeiten und unnötigen code rausschmeißen##########
-bis zum Kapitel Nisus (dieses ist schon gecleaned)
-
-# FINAL NOTES:
+# Some a priori info
 #*****************************
-# We have decided on the final file /media/inter/fkunz/2022_Accipiter/results/populations_alldata_GCF_FINAL/FINAL_63inds.vcf
-# Step 10 implements additional filter steps, resulting in 3 files: 
-#   FINAL_63inds.vcf 
-#   FINAL_63inds_cleaned.recode.vcf (liberal filtering)
-#   FINAL_63inds_cleaned_conservative.recode (conservative filtering)
-# Filtering however did not improve signal quality
-
-# ARCHIVE 
-#*****************************
-# 1)    EXCEL machen mit allen samples - dazu eintragen die coverage von gstacks und die quality sachen und das nexus-ergebnis (viele Ns oder nicht) und abgleichen mit jene, die min rausgetrichen hat
-# 2)    im logflile vom process_radtags die barcode-Kombinationen checken für jene Kombinationen, bei dennen so viele reads gefunden werden
-#         diese reads dann im demultiplexed file suchen und mal blasten
-#         gibts die reads? Sinds accipiters?
-# 3)    Testen und checken, ob die BAM files aller Individuen ok sind!
-#         Gibt es Individuen, bei denen das gar keine gescheiten BAM files existieren, weil zB Probenqualität zu schlecht?
-
-
-# Fragen
-#*****************************
-# QUESTION 1: in gstacks.log.distribs we see coverage per sample -> some samples have 1, some have 88...
-#      I guess this is weird? But it is widely distributed.
-
-# Im process_radtag.log (den wir leider nur für Lib H haben, weil STACKS das file ständig überschreibt) sind viiiele reads gefunden mit barcode-Kombination, 
-#   die wir gar nicht verwendet haben... tw sogar um einige mehr reads als von echten individuen... ist das normal?
-# Was genau ist eigenltih das indexen? Warum musste ich die individuellen bam files indexen, bevor sie gemerged wurden um ein bed file zu erzeugen?
-
-# Qualimap erzeugt qality checks per mapped bam file. In dem pdf steht die "mean coverage", laut manual ist das die "coverage depth". 
-#   Aber: eigentlich ist es die prozentuale Abdeckung des chromosoms... also wenn ein chromosom 1000 b groß ist und unser lokus 50 davon einnimmt, 
-#   dann würde die "covergae" hier (Length/Mapped_bases) 50/1000=0.05, also "5% des chromosoms gemapped"
-#   Das ist doch 1) eine falsche Bezeichnung, coverage depth bezeichnet doch wieoft ein Lokus im Stack gemapped wurde
-#   Und bringt und 2) so wie es da steht überhaupt nix, oder?
-
-# Nach dem demultiplexing haben wir process_radtags log files per library. Da gibts überall Barcode-Kombinationen, die keine Individuen/Samples sind, 
-#   aber öfters vorkommen als tatsächliche Samples... warum? Problem?
-
-# Info
-#*****************************
-# Section 4.4 could be built into the loops in 4.2 and 4.3 -> currently it isnt, as I simply didn want to wait again for the mapping to finish
-# Section 5.7 could be built into the mapping-code -> currently it isnt, as I simply didn want to wait 5 days again for the mapping
-
-# Troubleshooting - memory issues
-#*****************************
-# When running into memory issues, then raise the memory in the openPBS line:
-#   ## Select a maximum of 10 cores and 400gb of RAM #PBS -l select=1:ncpus=100:mem=400gb
-# Raising number of cores will speed things up, but:
-# 1) number of cores must be supported by the script that should run (no need to give 100 cores to a pipeline that can only work with 20)
-# 2) openPBS will punish jobs that demand more cores, so that they will be run AFTER jobs with lesser cores
-
-
-# 0) Preface and useful commands
-#*****************************
-# to get quick impression of minimum and maximum read length of the fastq file
-cd /media/inter/fkunz/2022_Accipiter
-awk '{if(NR%4==2) print length($0)}' ./data/HN00160148/Lib_A_1.fastq.gz | sort -n | head -n1
-qstat -aw # to check the job pipeline
-qdel <jobID> # to delete a job
-# CRT + C to kill a running job in the terminal
-
-# How to run IGViewer
-#*****************************
-# samples that will be viewed need to be indexed first, using bwa
-# in IGviewer the .bam file has to be selected, not the .bai file (that was created by samtools)
-# then run the shell script
-#samtools index /media/inter/fkunz/2022_Accipiter/results/reference_aligned/Anis.bam
-sh /opt/bioinformatics/IGV_Linux_2.10.2/igv.sh
-
+# This scripts and its subscripts present the full analytics. We refrained from storing intermediate results or data due to storage and size contraints. 
+# The codes are run on a server via a job manager (openPBS)
+# The codes only contain the final lines necessary for the analyses (as is reported in the manuscript). Countless re-runs with different subsets or parameters are not reported if not necessary/basis for decisions during analyses.  
+# As this code was prepared for documentation, paths (of subscripts or data) are not corrected
 
 # 1) Trim Galore
 #*****************************
 # This section will create and run a subscript on trimming the ends of the reads based on their phred score using Trim Galore
-# All output data is written into the same folder
 
 mkdir /media/inter/fkunz/2022_Accipiter/results/trimgalore_alldata
 
@@ -117,12 +53,10 @@ trim_galore --paired --quality 30 --length 130 --fastqc --cores 4 --output_dir /
 ''' > /media/inter/fkunz/2022_Accipiter/shell/1_trimgalore.sh
 qsub /media/inter/fkunz/2022_Accipiter/shell/1_trimgalore.sh
 
-
 # peak into output file
 zcat /media/inter/fkunz/2022_Accipiter/results/clonefilter_alldata/Lib_D_1_val_1.1.fq.gz | head -8 # look on the first 8 lines of the fastq.gz file
 
-
-# 2) und 3) Removing clones using clone filter, then demultiplexing
+# 2) and 3) Removing clones using clone filter, then demultiplexing (steps taken together)
 #*****************************
 # Clone filter: 
 # This section will create and run the subscript to run clone_filter pipeline from STACKS
@@ -795,6 +729,11 @@ populations \
   --fasta-samples-raw
 """ > /media/inter/fkunz/2022_Accipiter/shell/7_populations_GCF_final_qsub
 qsub /media/inter/fkunz/2022_Accipiter/shell/7_populations_GCF_final_qsub
+
+
+
+bis zum Kapitel Nisus (dieses ist schon gecleaned)
+
 
 
 # 7) The Nisus-Pipeline: Creating an outgroup from Accipiter nisus
