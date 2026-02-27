@@ -1,0 +1,11 @@
+## MODELFINDER
+#**********************
+bin/iqtree3 -s  C:\Users\floriankunz\2020_projects\2020_Habicht_FollowUp\analysis\IQ_Tree\MODELFINDER_noASC_53\FINAL_52inds_manuel.nexus -m MF -nt AUTO
+# -> Best model for data (without ASC as modelfinder cant process ASC): TVM+F+R2
+
+## TREE_ASC_53_TVM
+#**********************
+bin/iqtree3 -s  C:\Users\floriankunz\2020_projects\2020_Habicht_FollowUp\analysis\IQ_Tree\TREE_ASC_53_TVM\FINAL_52inds_manuel.nexus -st DNA -m TVM+F+R2+ASC -bb 10000 -nt AUTO
+# -> ASC cant work on invariant sites, so IQtree creates variant-sites-only phylip file for next run (note: IQTree seems to accept all monomorphic sites AS WELL AS all sites with missing data (theoretically polymorphic) as invariant sites)
+
+bin/iqtree3 -s  C:\Users\floriankunz\2020_projects\2020_Habicht_FollowUp\analysis\IQ_Tree\TREE_ASC_53_TVM\FINAL_52inds_manuel.nexus.varsites.phy -st DNA -m TVM+F+R2+ASC -bb 10000 -nt AUTO
