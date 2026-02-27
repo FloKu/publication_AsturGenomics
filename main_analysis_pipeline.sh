@@ -11,7 +11,7 @@
 
 # Some a priori info
 #*****************************
-# This scripts and its subscripts present the full analytics. We refrained from storing intermediate results or data due to storage and size contraints. 
+# This scripts and its subscripts present the analytics pipeline. We refrained from storing intermediate results or data due to storage and size contraints. 
 # The codes are run on a server via a job manager (openPBS)
 # The codes only contain the final lines necessary for the analyses (as is reported in the manuscript). Countless re-runs with different subsets or parameters are not reported if not necessary/basis for decisions during analyses.  
 # As this code was prepared for documentation, paths (of subscripts or data) are not corrected
@@ -331,13 +331,6 @@ populations \
 """ > /media/inter/fkunz/2022_Accipiter/shell/6_populations_GCF_final_qsub.sh
 qsub /media/inter/fkunz/2022_Accipiter/shell/6_populations_GCF_final_qsub.sh
 
-
-# bis hierher------------------------------------------------------------------------------------------------------------------------------------------------
-
-bis zum Kapitel Nisus (dieses ist schon gecleaned)
-
-
-
 # 7) The Nisus-Pipeline: Creating an outgroup from Accipiter nisus
 #*****************************
 # The whole pipeline is necessary to add an outgroup to our data.  
@@ -351,7 +344,7 @@ bis zum Kapitel Nisus (dieses ist schon gecleaned)
 #   7.7) Summary
 
 # The pipeline results in a Nisus file, that was NOT part of the STACKS pipeline. Hence it was not subject to the stacks parameters. 
-# Hence the branch length in a final tree is wrong, due to a strong reference bias against the Nisus genome.
+# Hence the branch length in a final tree should not be interpret, due to a strong reference bias against the Nisus genome.
 # This is not a problem as Nisus soley job is to serve as outgroup, but needs to be reported properly.
 
 mkdir /media/inter/fkunz/2022_Accipiter/results/nisus_pipeline
@@ -396,8 +389,8 @@ echo '''
 cd /home/fkunz/Downloads
 module load Tools/SRAtools-2.11.2
 prefetch SRR18767723
-''' > /media/inter/fkunz/2022_Accipiter/shell/SRA_prefetch.sh
-qsub /media/inter/fkunz/2022_Accipiter/shell/SRA_prefetch.sh
+''' > /media/inter/fkunz/2022_Accipiter/shell/7_SRA_prefetch.sh
+qsub /media/inter/fkunz/2022_Accipiter/shell/7_SRA_prefetch.sh
 
 # compare both files (fetched by the toolkit versus downloaded manually)
 cat /media/inter/fkunz/2022_Accipiter/data/Nisus_Genomes/SRA/downloaded_manually/SRR18767723 | head -5
@@ -416,8 +409,8 @@ echo '''
 cd /media/inter/fkunz/2022_Accipiter/data/Nisus_Genome/SRA/downloaded_manually
 module load Tools/SRAtools-2.11.2
 fasterq-dump SRR18767723
-''' > /media/inter/fkunz/2022_Accipiter/shell/SRA_toolkit.sh
-qsub /media/inter/fkunz/2022_Accipiter/shell/SRA_toolkit.sh
+''' > /media/inter/fkunz/2022_Accipiter/shell/7_SRA_toolkit.sh
+qsub /media/inter/fkunz/2022_Accipiter/shell/7_SRA_toolkit.sh
 
 
 # 7.2) Mapping nisus genome (SRA) to accipter genome (GenBank) 
@@ -452,8 +445,8 @@ bwa mem /media/inter/fkunz/2022_Accipiter/data/Gentilis_reference/GCF_929443795.
 /media/inter/fkunz/2022_Accipiter/data/Nisus_Genomes/SRA/downloaded_manually/SRR18767723_2.fastq \
 | samtools view -bh \
 | samtools sort > /media/inter/fkunz/2022_Accipiter/results/nisus_pipeline/Anis_BWA_GCF.bam
-""" > /media/inter/fkunz/2022_Accipiter/shell/mapping/5_BWAmapping_GCF.sh
-qsub /media/inter/fkunz/2022_Accipiter/shell/mapping/5_BWAmapping_GCF.sh
+""" > /media/inter/fkunz/2022_Accipiter/shell/mapping/7_BWAmapping_GCF.sh
+qsub /media/inter/fkunz/2022_Accipiter/shell/mapping/7_BWAmapping_GCF.sh
 
 # 7.3) Remove duplicates to reduce file size and computational time (this could also be implemented in the script above)
 #*****************************
@@ -487,8 +480,8 @@ samtools markdup -r \
   /media/inter/fkunz/2022_Accipiter/results/nisus_pipeline/Anis_BWA_GCF_positionord.bam \
   /media/inter/fkunz/2022_Accipiter/results/nisus_pipeline/Anis_BWA_GCF_markdup.bam
 
-""" > /media/inter/fkunz/2022_Accipiter/shell/mapping/5_removeduplicates.sh
-qsub /media/inter/fkunz/2022_Accipiter/shell/mapping/5_removeduplicates.sh
+""" > /media/inter/fkunz/2022_Accipiter/shell/mapping/7_removeduplicates.sh
+qsub /media/inter/fkunz/2022_Accipiter/shell/mapping/7_removeduplicates.sh
 
 # 7.4) Samtools MPILEUP 
 #***********************************
@@ -517,7 +510,7 @@ python /media/inter/fkunz/2022_Accipiter/scripts/Mpileup4VCF.py \
 
 # Now we have vcf files now that include all accipiter individuals from STACKS pipeline and the Nisus genome from the Nisus-Pipeline. 
 
-# 8) Create a file with missingnes per individual, vcftools
+# 8) Create a file with missingn data per individual, vcftools --- note that this analysis was later done in R
 #*****************************
 mkdir /media/inter/fkunz/2022_Accipiter/results/FINAL_files
 cd /media/inter/fkunz/2022_Accipiter/results/FINAL_files
@@ -539,4 +532,5 @@ python /media/inter/fkunz/2022_Accipiter/scripts/vcf2phylip_2.py \
   -m 1 \
   -n
 
+# END OF PIPELINE: a vcf file and a nexus file of the cleaned SNPs alignemnt
 # These files (vcf/nexus) were the final files after STACKS and moved to R for further cleaning and preparation of input files for phylogenetical analyses.
