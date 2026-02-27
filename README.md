@@ -1,12 +1,8 @@
 # publication_AccipiterGenomics
 
-This repository contains the Rscript for the analysis wihtin the paper "Completing the Puzzle: Genomic Analyses Using Museomics Finally Confirm the Split Between Accipiter gentilis and Accipiter atricapillus", currently submitted to the Journal "XXX".
+This repository contains the Rscript for the analysis wihtin the paper "Goshawk genomics: Genome wide single nucleotide polymorphisms (SNPs) confirm species status of Astur gentilis and Astur atricapillus", currently submitted to the Journal "Systematic Biology".
 
 Publication details will be added upon acceptance.
 
 
-
-todo
-1) add analyses.R
-2) clean scripts
-3) 3) add mappedreads.txt from qualimap run
+The repo contains the main pipeline (working the raw data from sequencing), shell scripts used (shell) and further analyses (scripts)
