@@ -1,4 +1,4 @@
-# publication_AccipiterGenomics
+# publication_AsturGenomics
 
 This repository contains the Rscript for the analysis wihtin the paper "Goshawk genomics: Genome wide single nucleotide polymorphisms (SNPs) confirm species status of Astur gentilis and Astur atricapillus", currently submitted to the Journal "Systematic Biology".
 
